@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Calendar, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 import { TrainingSession } from '@/types/training';
 import { addDays, addWeeks, format, parseISO, startOfWeek, isSameDay } from 'date-fns';
-import { vi } from 'date-fns/locale';
 
 interface WeeklyCalendarProps {
   sessions: TrainingSession[];
@@ -77,7 +76,7 @@ export const WeeklyCalendar = ({ sessions, startDate, completedSessions, onSessi
           Tuần trước
         </Button>
         <h3 className="font-semibold">
-          {format(weekStart, 'dd/MM/yyyy', { locale: vi })} - {format(addDays(weekStart, 6), 'dd/MM/yyyy', { locale: vi })}
+          {format(weekStart, 'dd/MM/yyyy')} - {format(addDays(weekStart, 6), 'dd/MM/yyyy')}
         </h3>
         <Button
           variant="outline"

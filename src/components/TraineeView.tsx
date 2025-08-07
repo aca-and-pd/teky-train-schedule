@@ -4,21 +4,26 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar, Clock, CheckCircle2, AlertCircle, BookOpen, Users } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Calendar as CalendarIcon, Clock, CheckCircle2, AlertCircle, BookOpen, Users } from "lucide-react";
 import { TrainingSession } from '@/types/training';
 import { TrainingSessionCard } from './TrainingSessionCard';
+import { addDays, addWeeks, format, parseISO, isSameDay } from 'date-fns';
 
 interface TraineeViewProps {
   sessions: TrainingSession[];
 }
 
 export const TraineeView = ({ sessions }: TraineeViewProps) => {
-  const [startDate, setStartDate] = useState('');
+  const [startDate, setStartDate] = useState('2024-01-08'); // Default start date
   const [traineeData, setTraineeData] = useState({
     name: 'Nguyễn Văn A',
     currentWeek: 1,
     completedSessions: [1, 2]
   });
+  const [selectedSession, setSelectedSession] = useState<TrainingSession | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const getSessionStatus = (sessionId: number) => {
     if (traineeData.completedSessions.includes(sessionId)) {
@@ -72,6 +77,44 @@ export const TraineeView = ({ sessions }: TraineeViewProps) => {
   const nextWeekSessions = sessions.filter(session => session.week === traineeData.currentWeek + 1);
   const completedSessions = sessions.filter(session => traineeData.completedSessions.includes(session.id));
 
+  // Calculate actual dates for sessions
+  const getSessionDate = (session: TrainingSession) => {
+    if (!startDate) return null;
+    
+    const start = parseISO(startDate);
+    const weekOffset = session.week - 1;
+    const weekStartDate = addWeeks(start, weekOffset);
+    
+    // Convert dayOfWeek to number (0 = Monday)
+    const dayMapping: Record<string, number> = {
+      'Thứ 2': 0,
+      'Thứ 3': 1, 
+      'Thứ 4': 2,
+      'Thứ 5': 3,
+      'Thứ 6': 4,
+      'Thứ 7 / Chủ Nhật': 5
+    };
+    
+    const dayOffset = dayMapping[session.dayOfWeek] || 0;
+    return addDays(weekStartDate, dayOffset);
+  };
+
+  // Get sessions for calendar
+  const getSessionsForDate = (date: Date) => {
+    return sessions.filter(session => {
+      const sessionDate = getSessionDate(session);
+      return sessionDate && isSameDay(sessionDate, date);
+    });
+  };
+
+  const handleDateClick = (date: Date) => {
+    const sessionsOnDate = getSessionsForDate(date);
+    if (sessionsOnDate.length > 0) {
+      setSelectedSession(sessionsOnDate[0]); // Show first session if multiple
+      setModalOpen(true);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Trainee Info Card */}
@@ -122,6 +165,69 @@ export const TraineeView = ({ sessions }: TraineeViewProps) => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Training Calendar */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarIcon className="w-5 h-5" />
+            Lịch đào tạo
+          </CardTitle>
+          <CardDescription>
+            Nhấn vào ngày có buổi học để xem chi tiết
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Calendar
+            mode="single"
+            className="rounded-md border"
+            modifiers={{
+              completed: (date) => {
+                const sessionsOnDate = getSessionsForDate(date);
+                return sessionsOnDate.some(session => 
+                  traineeData.completedSessions.includes(session.id)
+                );
+              },
+              upcoming: (date) => {
+                const sessionsOnDate = getSessionsForDate(date);
+                return sessionsOnDate.some(session => 
+                  !traineeData.completedSessions.includes(session.id)
+                );
+              }
+            }}
+            modifiersStyles={{
+              completed: { 
+                backgroundColor: 'hsl(var(--muted))',
+                color: 'hsl(var(--muted-foreground))'
+              },
+              upcoming: { 
+                backgroundColor: 'hsl(var(--success) / 0.2)',
+                color: 'hsl(var(--success-foreground))'
+              }
+            }}
+            onDayClick={handleDateClick}
+            disabled={false}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Session Detail Modal */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Chi tiết buổi đào tạo</DialogTitle>
+          </DialogHeader>
+          {selectedSession && (
+            <div className="space-y-4">
+              <TrainingSessionCard
+                session={selectedSession}
+                status={getSessionStatus(selectedSession.id)}
+                showDetails={true}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Current Week Sessions */}
       <Card>

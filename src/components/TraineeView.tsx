@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
+import { WeeklyCalendar } from './WeeklyCalendar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar as CalendarIcon, Clock, CheckCircle2, AlertCircle, BookOpen, Users } from "lucide-react";
 import { TrainingSession } from '@/types/training';
@@ -77,44 +77,6 @@ export const TraineeView = ({ sessions }: TraineeViewProps) => {
   const nextWeekSessions = sessions.filter(session => session.week === traineeData.currentWeek + 1);
   const completedSessions = sessions.filter(session => traineeData.completedSessions.includes(session.id));
 
-  // Calculate actual dates for sessions
-  const getSessionDate = (session: TrainingSession) => {
-    if (!startDate) return null;
-    
-    const start = parseISO(startDate);
-    const weekOffset = session.week - 1;
-    const weekStartDate = addWeeks(start, weekOffset);
-    
-    // Convert dayOfWeek to number (0 = Monday)
-    const dayMapping: Record<string, number> = {
-      'Thứ 2': 0,
-      'Thứ 3': 1, 
-      'Thứ 4': 2,
-      'Thứ 5': 3,
-      'Thứ 6': 4,
-      'Thứ 7 / Chủ Nhật': 5
-    };
-    
-    const dayOffset = dayMapping[session.dayOfWeek] || 0;
-    return addDays(weekStartDate, dayOffset);
-  };
-
-  // Get sessions for calendar
-  const getSessionsForDate = (date: Date) => {
-    return sessions.filter(session => {
-      const sessionDate = getSessionDate(session);
-      return sessionDate && isSameDay(sessionDate, date);
-    });
-  };
-
-  const handleDateClick = (date: Date) => {
-    const sessionsOnDate = getSessionsForDate(date);
-    if (sessionsOnDate.length > 0) {
-      setSelectedSession(sessionsOnDate[0]); // Show first session if multiple
-      setModalOpen(true);
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Trainee Info Card */}
@@ -171,42 +133,21 @@ export const TraineeView = ({ sessions }: TraineeViewProps) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CalendarIcon className="w-5 h-5" />
-            Lịch đào tạo
+            Lịch đào tạo theo tuần
           </CardTitle>
           <CardDescription>
-            Nhấn vào ngày có buổi học để xem chi tiết
+            Nhấn vào buổi học để xem chi tiết
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Calendar
-            mode="single"
-            className="rounded-md border"
-            modifiers={{
-              completed: (date) => {
-                const sessionsOnDate = getSessionsForDate(date);
-                return sessionsOnDate.some(session => 
-                  traineeData.completedSessions.includes(session.id)
-                );
-              },
-              upcoming: (date) => {
-                const sessionsOnDate = getSessionsForDate(date);
-                return sessionsOnDate.some(session => 
-                  !traineeData.completedSessions.includes(session.id)
-                );
-              }
+          <WeeklyCalendar
+            sessions={sessions}
+            startDate={startDate}
+            completedSessions={traineeData.completedSessions}
+            onSessionClick={(session) => {
+              setSelectedSession(session);
+              setModalOpen(true);
             }}
-            modifiersStyles={{
-              completed: { 
-                backgroundColor: 'hsl(var(--muted))',
-                color: 'hsl(var(--muted-foreground))'
-              },
-              upcoming: { 
-                backgroundColor: 'hsl(var(--success) / 0.2)',
-                color: 'hsl(var(--success-foreground))'
-              }
-            }}
-            onDayClick={handleDateClick}
-            disabled={false}
           />
         </CardContent>
       </Card>
